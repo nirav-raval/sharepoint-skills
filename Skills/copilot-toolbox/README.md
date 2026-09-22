@@ -1,48 +1,65 @@
-# Copilot Toolbox – SharePoint Skill Package
+# Copilot Toolbox
 
-This package installs, synchronizes, repairs, and publishes the portable English Copilot Toolbox on a SharePoint site.
+Creates and maintains a SharePoint-based toolbox for discovering, documenting, reviewing, and synchronizing the tools available to Copilot in SharePoint.
 
-## Package contents
+![preview](./assets/preview.png)
 
-```text
-copilot-toolbox-package/
-├── README.md
-└── copilot-toolbox/
-    └── SKILL.md
-```
+## What you get
+
+- A SharePoint list named `copilot-toolbox` that acts as a local handbook for Copilot tools.
+- Automatic discovery and synchronization of the current Copilot tool catalog.
+- Enriched tool records with usage guidance, parameters, examples, prompts, categories, and lifecycle status.
+- A `New Tools` review view and `Set tool active` Quick Step.
+- A SharePoint page named `Toolbox.aspx`.
+- An optional English HTML Toolbook named `copilot-toolbook-en.html`.
+- Safe repair and resume behavior after interrupted or incomplete runs.
+
+## SharePoint Skill
+
+| Solution | Author(s) |
+| --- | --- |
+| copilot-toolbox | Michael Greth &#124; [GitHub](https://github.com/mysharepoint) &#124; [LinkedIn](https://www.linkedin.com/in/mgreth/) |
+
+## Version history
+
+| Version | Date | Comments |
+| --- | --- | --- |
+| 1.0 | September 2026 | Initial Release |
+
+## Installation
+
+1. Open the target SharePoint site.
+2. Upload the complete inner `copilot-toolbox` folder to:
+
+   `Agent Assets / Skills / copilot-toolbox`
+
+3. Start a new Copilot conversation on the site.
+4. Ask Copilot:
+
+   > Install the toolbox and import all tools.
+
+On first use, the skill creates the required SharePoint artifacts and imports the current tool catalog after the enrichment checks pass.
+
+On later runs, it synchronizes and repairs the existing toolbox without recreating valid artifacts.
 
 ## What the skill does
 
 The `copilot-toolbox` skill:
 
-- creates the English `copilot-toolbox` SharePoint list when it doesn't exist;
+- creates the English `copilot-toolbox` SharePoint list when it does not exist;
 - creates the required schema, the `New Tools` review view, the `Set tool active` Quick Step, and `Toolbox.aspx`;
 - imports and synchronizes the complete current Copilot tool catalog;
-- calls `learn_tool` for every current tool, including direct tools, before planning any tool-record writes;
-- stores the unchanged short catalog description in `description`, detailed learned guidance in `UseCase`, and every exact learned input with its verified meaning in `KeyParameters`;
-- blocks all tool-record writes until every current tool passes the mandatory enrichment transaction gate;
-- rejects placeholder, generic, provisional, emergency, simplified, or seed imports;
-- automatically detects and repairs incomplete current-tool rows, including rows already marked `active`;
-- safely resumes after timeouts, parser failures, expired confirmations, interrupted runs, and ambiguous write outcomes by fresh-reading the list first;
-- creates only missing rows and updates only incomplete rows, avoiding duplicate writes;
-- tracks `new`, `active`, `archived`, `removed`, and returning tools without deleting missing records automatically;
-- reports success only after a fresh-read verification proves complete identity coverage, no duplicates, no missing required values, no filler, and meaningful parameter documentation;
-- publishes one standalone English handbook named `copilot-toolbook-en.html` at the root of the target site's runtime-resolved standard document library (`Documents` or its localized equivalent, such as `Dokumente`);
+- calls `learn_tool` for every current tool, including direct tools, before planning tool-record writes;
+- stores the original short catalog description in `description`;
+- stores detailed learned guidance in `UseCase`;
+- stores exact learned inputs and their verified meaning in `KeyParameters`;
+- blocks tool-record writes until every current tool passes the enrichment checks;
+- repairs incomplete current-tool rows;
+- resumes safely after timeouts, parser failures, expired confirmations, interrupted runs, and ambiguous write outcomes;
+- creates only missing rows and updates only incomplete rows;
+- tracks `new`, `active`, `archived`, `removed`, and returning tools;
+- publishes one standalone English handbook named `copilot-toolbook-en.html`;
 - never modifies or replaces `Home.aspx`.
-
-## Installation
-
-1. Open the target SharePoint site.
-2. Copy the complete `copilot-toolbox` folder into:
-
-   `Agent Assets / Skills / copilot-toolbox`
-
-3. Start a new Copilot conversation on the target site so the current skill version is selected.
-4. Ask Copilot:
-
-   > Install the toolbox and import all tools.
-
-On first use, the skill provisions the complete solution and imports the current catalog only after the enrichment gate passes. On later runs, it synchronizes and repairs the existing toolbox without recreating artifacts.
 
 ## Regular synchronization and repair
 
@@ -50,50 +67,42 @@ Ask Copilot:
 
 > Synchronize the Copilot Toolbox and fully enrich every current tool.
 
-The skill reads the current list, learns every current tool, validates every planned row, repairs incomplete records, adds newly detected tools with status `new`, reactivates returning tools, and marks proven missing tools as `removed`.
+The skill reads the current list, learns every current tool, validates planned changes, repairs incomplete records, adds newly detected tools with status `new`, reactivates returning tools, and marks proven missing tools as `removed`.
 
 ## Enrichment transaction gate
 
-Before any tool-record create or update, the skill must prove for every current tool that:
+Before any tool-record create or update, the skill verifies that:
 
-- `UseCase` contains `When to invoke`, `When not to invoke`, and `Usage notes` in order;
+- `UseCase` contains `When to invoke`, `When not to invoke`, and `Usage notes`;
 - learned exclusions, prerequisites, sequencing, limits, and constraints are retained;
 - `KeyParameters` contains every exact learned parameter name and a verified meaning;
-- `Category` is the most specific verified family;
+- `Category` uses the most specific verified family;
 - `Example` and `PromptTemplate` are capability-specific;
 - no managed field contains placeholder or generic fallback text.
 
-There is no degraded import mode. If the gate fails, the skill writes no tool records and reports `partial` with the failed checks.
+If these checks fail, the skill does not write incomplete tool records.
 
 ## Failure recovery
 
 After a timeout, parser error, expired confirmation, interrupted execution, or unknown write result, the skill:
 
-1. fresh-reads every managed field;
+1. reads the managed fields again;
 2. classifies each authoritative tool as verified, missing, incomplete, or duplicate;
 3. preserves verified rows and reviewed lifecycle state;
 4. creates only missing rows;
 5. updates only incomplete rows from retained learned definitions;
-6. never repeats a write whose intended state is already present.
-
-If the platform requires a new confirmation, approve it and rerun the same synchronization request. The skill resumes from the fresh-read state and must not fall back to placeholders.
+6. avoids repeating writes whose intended state is already present.
 
 ## Toolbox.aspx button configuration
 
-Both required controls must be real SharePoint **Button** web parts. For each button:
-
-1. Set **Action / Action type** to **Copilot in SharePoint**.
-2. Do **not** leave the default action as **Link** and do not enter a URL.
-3. Enter the exact request in the **Prompt** field displayed below the Copilot in SharePoint action selector.
-
-Required configuration:
+Both required controls must use SharePoint **Button** web parts.
 
 | Button | Action | Prompt |
-|---|---|---|
+| --- | --- | --- |
 | `Update Toolbox` | `Copilot in SharePoint` | `Synchronize the Copilot Toolbox and fully enrich every current tool.` |
 | `Toolbook HTML` | `Copilot in SharePoint` | `Create or refresh copilot-toolbook-en.html in this site's standard document library.` |
 
-A button configured as `Link` is a failed installation, even if its label and visible text are correct. Page verification must prove the Button web-part type, the `Copilot in SharePoint` action, and the exact Prompt value. If page extraction can't expose these properties, report them as unverified rather than claiming that the buttons work.
+A button configured as `Link` instead of `Copilot in SharePoint` is not a valid installation.
 
 ## Publish the Toolbook
 
@@ -101,13 +110,17 @@ Ask Copilot:
 
 > Create or refresh copilot-toolbook-en.html in this site's standard document library.
 
-Only the English HTML Toolbook is published. The skill resolves the site's standard document library at runtime—commonly `Documents` or a localized equivalent such as `Dokumente`—and saves `copilot-toolbook-en.html` at that library's root. It includes `new`, `active`, and `archived` tools and excludes `removed` tools by default.
+The skill resolves the site's standard document library at runtime and saves `copilot-toolbook-en.html` at the library root.
+
+The Toolbook includes `new`, `active`, and `archived` tools and excludes `removed` tools by default.
 
 ## Review workflow
 
-Newly detected tools receive status `new`. Review them in the `New Tools` view and use the `Set tool active` Quick Step to change reviewed records to `active`.
+Newly detected tools receive status `new`.
 
-An `active` status doesn't exempt a row from quality checks. A later synchronization repairs an active row if its learned documentation is incomplete.
+Review them in the `New Tools` view and use the `Set tool active` Quick Step to change reviewed records to `active`.
+
+An `active` status does not exempt a row from later quality checks.
 
 ## Expected artifacts
 
@@ -115,28 +128,25 @@ An `active` status doesn't exempt a row from quality checks. A later synchroniza
 - View: `New Tools`
 - Quick Step: `Set tool active`
 - SharePoint page: `Toolbox.aspx`
-- English handbook: `copilot-toolbook-en.html` in the root of the standard document library
+- English handbook: `copilot-toolbook-en.html`
 
 ## Verification checklist
 
 After installation or synchronization, verify that:
 
-- the list contains every current authoritative tool identity exactly once;
+- every current authoritative tool identity exists exactly once;
 - every current tool was processed through `learn_tool`;
-- `description` keeps the original short catalog text unchanged;
+- `description` keeps the original short catalog text;
 - `UseCase` contains tool-specific learned invocation guidance and constraints;
-- `KeyParameters` contains exact input names and verified meanings, not names only;
-- no row contains `Needs review`, generic filler, or equivalent placeholder text;
+- `KeyParameters` contains exact input names and verified meanings;
+- no row contains generic filler or placeholder text;
 - the `New Tools` view and `Set tool active` Quick Step work;
 - `Toolbox.aspx` uses the `copilot-toolbox` list and `New Tools` view;
-- `copilot-toolbook-en.html` exists at the root of the runtime-resolved standard document library;
+- `copilot-toolbook-en.html` exists in the resolved standard document library;
 - `Home.aspx` remains unchanged.
 
-If any check fails, the run is `partial`, not complete.
+## Disclaimer
 
-## Attribution
+**THIS CODE IS PROVIDED _AS IS_ WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.**
 
-**Built by Michael Greth**
-- LinkedIn: linkedin.com/in/mgreth/
-- Podcast: yourcopilot.de  
-- GitHub: github.com/mysharepoint
+<img src="https://m365-visitor-stats.azurewebsites.net/sharepoint-skills/skills/copilot-toolbox" />
